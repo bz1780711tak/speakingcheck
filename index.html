@@ -126,8 +126,8 @@
 
     <script>
         // 環境がAPIキーを自動挿入するためのフックとして、空のキーを定義します。
-        // !!! 環境のプロトコルにより、この変数が実行時に認証トークンに置き換えられます !!!
-        const apiKey = "";
+        // ただし、このキーはURLに含めず、環境が自動で認証トークンを付与するのに任せます。
+        const apiKey = ""; 
         const modelName = "gemini-2.5-flash-preview-09-2025";
         
         // DOM要素の取得
@@ -164,7 +164,7 @@
                     "description": "A very simple, encouraging, and actionable feedback message in English for an elementary student (e.g., 'Great job! Try to say 'hello' next time.'). Max 15 words." 
                 },
                 "feedback_jp": { 
-                    "type": "STRING",
+                    "type": "STRING", // 修正: ここが "type: "STRING" から "type": "STRING" に修正されました。
                     "description": "小学生向けの簡単な日本語フィードバック（例：すごく上手！次は「こんにちは」と言ってみてね。）。" 
                 },
                 "retranslation_jp": { 
@@ -192,8 +192,8 @@
             const systemPrompt = "You are a friendly and encouraging English teacher for elementary school students. Your task is to evaluate a single English sentence provided by the student. Provide a score from 1 to 100 based on correctness, clarity, and fluency. The scoring should be generous and focused on positive reinforcement. You must also provide the best Japanese translation of the spoken sentence, suitable for a child. Always return the response in the specified JSON format.";
             const userQuery = `Please score, give feedback, and provide a Japanese translation for the following English sentence spoken by a child: "${userTranscript}"`;
             
-            // 修正: APIキーをクエリパラメータとして確実に含めます
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            // 修正: APIキーをURLに含めるのをやめ、環境の自動認証機能に依存する
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
