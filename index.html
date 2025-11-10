@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,11 +55,11 @@
     <!-- メインコンテナ -->
     <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 md:p-10 border-4 border-primary-blue">
         
-        <!-- タイトル -->
+        <!-- タイトルをSpeech To Textに変更 -->
         <h1 class="text-3xl md:text-4xl font-bold text-center text-primary-blue mb-6">
-            <span role="img" aria-label="check mark">🗣️</span>
+            <span role="img" aria-label="speech icon">🗣️</span>
             Speech To Text Check
-            <span role="img" aria-label="check mark">💬</span>
+            <span role="img" aria-label="chat icon">💬</span>
         </h1>
 
         <!-- メッセージエリア -->
@@ -69,12 +69,13 @@
         </div>
 
         <!-- 認識されたテキスト表示エリア -->
+        <!-- 境界線をシンプルに -->
         <div class="bg-white border-2 border-gray-300 p-4 rounded-xl shadow-inner min-h-[100px] mb-8">
             <h2 class="text-xl font-bold text-gray-700 mb-2">What You Said（あなたが言ったこと）：</h2>
             <p id="result-text" class="text-2xl text-gray-800 font-extrabold break-words">---</p>
         </div>
         
-        <!-- 採点結果表示エリアは完全に削除 -->
+        <!-- 採点結果表示エリア (#score-area) は削除 -->
 
         <!-- マイクボタンコンテナ -->
         <div class="flex flex-col items-center justify-center">
@@ -97,13 +98,7 @@
             <p id="mic-instruction" class="mt-4 text-gray-600 font-medium">Tap and speak!</p>
         </div>
         
-        <!-- 注意書き (API利用不可に関する具体的な指示) -->
-        <div id="warning-box" class="mt-8 p-3 text-sm rounded-lg bg-danger-red/10 border border-danger-red text-danger-red">
-            <p class="font-bold mb-1">⚠️ 機能制限のお知らせ</p>
-            <p id="warning-text">
-                **AIによる採点・フィードバック機能** は、認証エラーにより現在利用できません。代わりに、**あなたが話した英語をテキストに変換する機能** のみを提供します。
-            </p>
-        </div>
+        <!-- 以前の警告ボックスは削除されました -->
 
     </div>
 
@@ -114,13 +109,17 @@
         const micButton = document.getElementById('microphone-button');
         const micIcon = document.getElementById('mic-icon');
         const micInstruction = document.getElementById('mic-instruction');
-        const warningText = document.getElementById('warning-text');
+        const warningText = document.getElementById('warning-text'); // warningText変数はDOMから削除されたが、ここでは残しておく
+        
+        // 採点機能用のDOM要素はすべて削除
 
         // Web Speech APIの互換性を確認
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         let recognition = null;
         let isRecording = false;
+
+        // AI採点ロジックとJSONスキーマはすべて削除
 
         /**
          * 音声認識機能の初期化とイベント設定
@@ -132,7 +131,7 @@
             
             if (!SpeechRecognition) {
                 // Speech Recognitionが利用不可の場合の処理
-                warningText.innerHTML = '❌ Speech Recognition is not available on this browser. Please use Chrome or Edge.';
+                // 警告ボックスは削除したが、エラーメッセージはstatusTextに出す
                 statusText.textContent = '❌ 音声認識は利用できません。ChromeまたはEdgeをご利用ください。';
                 micButton.disabled = true;
                 micButton.classList.add('opacity-50', 'cursor-not-allowed');
@@ -154,7 +153,7 @@
                 }
 
                 try {
-                    // マイクの許可を明示的に要求
+                    // マイクの許可を明示的に要求し、許可ダイアログを強制的に表示
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     stream.getTracks().forEach(track => track.stop()); // ストリームはすぐに停止
 
@@ -172,7 +171,7 @@
                 } catch (e) {
                     // ユーザーがマイクアクセスを拒否した場合
                     console.error("Microphone access failed:", e);
-                    isRecording = false; // エラーが発生した場合はisRecordingをリセット
+                    isRecording = false; 
                     micButton.classList.remove('bg-danger-red', 'recording-pulse');
                     micButton.classList.add('bg-primary-blue');
                     micIcon.style.stroke = 'white';
@@ -198,7 +197,7 @@
 
                 resultText.textContent = transcript;
                 statusText.textContent = '✅ 認識しました！';
-                // ここでAPIコールは行いません
+                // AI採点ロジックはここから完全に削除
             };
 
             // 録音終了時のイベント 
