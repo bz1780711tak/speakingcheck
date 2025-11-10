@@ -164,7 +164,7 @@
                     "description": "A very simple, encouraging, and actionable feedback message in English for an elementary student (e.g., 'Great job! Try to say 'hello' next time.'). Max 15 words." 
                 },
                 "feedback_jp": { 
-                    "type": "STRING", // 修正: ここが "type: "STRING" から "type": "STRING" に修正されました。
+                    "type": "STRING",
                     "description": "小学生向けの簡単な日本語フィードバック（例：すごく上手！次は「こんにちは」と言ってみてね。）。" 
                 },
                 "retranslation_jp": { 
@@ -193,6 +193,7 @@
             const userQuery = `Please score, give feedback, and provide a Japanese translation for the following English sentence spoken by a child: "${userTranscript}"`;
             
             // 修正: APIキーをURLに含めるのをやめ、環境の自動認証機能に依存する
+            // 403エラーを解決するため、?key=${apiKey} を削除
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
             const payload = {
