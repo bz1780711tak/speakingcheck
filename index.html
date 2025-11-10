@@ -126,7 +126,6 @@
 
     <script>
         // 環境がAPIキーを自動挿入するためのフックとして、空のキーを定義します。
-        // NOTE: この環境では、apiKeyが空の場合、fetchが自動的に認証を処理すると期待されます。
         const apiKey = ""; 
         const modelName = "gemini-2.5-flash-preview-09-2025";
         
@@ -192,8 +191,8 @@
             const systemPrompt = "You are a friendly and encouraging English teacher for elementary school students. Your task is to evaluate a single English sentence provided by the student. Provide a score from 1 to 100 based on correctness, clarity, and fluency. The scoring should be generous and focused on positive reinforcement. You must also provide the best Japanese translation of the spoken sentence, suitable for a child. Always return the response in the specified JSON format.";
             const userQuery = `Please score, give feedback, and provide a Japanese translation for the following English sentence spoken by a child: "${userTranscript}"`;
             
-            // 重要な修正: APIキーをURLから削除し、ヘッダーベースの認証に期待する
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+            // APIキーをクエリパラメータとして使用する形式に戻す
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
@@ -209,25 +208,17 @@
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
-                    // 環境が自動で認証ヘッダーを付与することを期待し、
-                    // Content-Typeヘッダーのみを設定する
                     const response = await fetch(apiUrl, {
                         method: 'POST',
+                        // ヘッダーは'Content-Type'のみに限定し、環境による認証情報の自動付与に期待する
                         headers: { 
                             'Content-Type': 'application/json',
-                            // 実行環境が認証トークンを提供する場合のヘッダー名として、
-                            // 'X-API-Key' や 'Authorization' を想定するが、ここでは自動付与に依存する。
-                            // 強制的に認証ヘッダーを試すために、もし __initial_auth_token があれば使う（通常はGemini APIではないが、念のため）
-                            // const authHeader = typeof __initial_auth_token !== 'undefined' ? `Bearer ${__initial_auth_token}` : null;
-                            // if (authHeader) headers['Authorization'] = authHeader;
                         },
                         body: JSON.stringify(payload)
                     });
 
                     if (!response.ok) {
-                        // HTTPエラーの場合、ステータスコードを含めてエラーを投げる
                         const errorBody = await response.text();
-                        // 403エラーが発生した場合、ログに詳細を含める
                         console.error(`Attempt ${attempt + 1} received a bad response status: ${response.status}. Full error body:`, errorBody.substring(0, 500) + '...');
                         throw new Error(`HTTP error! status: ${response.status} (${response.statusText}). Response body: ${errorBody.substring(0, 80)}...`);
                     }
@@ -236,7 +227,6 @@
                     const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                     
                     if (!jsonText) {
-                        // JSONテキストが空の場合、完全な結果をログに含める
                         console.error("Received unexpected or empty API response structure. Full result:", result);
                         throw new Error("API response was missing expected JSON content.");
                     }
@@ -248,6 +238,7 @@
                     lastError = error;
                     // Exponential backoff
                     if (attempt < maxRetries - 1) {
+                        console.log(`Attempt ${attempt + 1} failed. Error: ${error.message} (${error.responseBody ? error.responseBody.substring(0, 50) + '...' : ''}). Retrying in ${Math.pow(2, attempt) * 1000}ms...`);
                         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
                     }
                 }
@@ -312,8 +303,7 @@
                 }
 
                 try {
-                    // 埋め込み環境での問題を回避するため、navigator.mediaDevices.getUserMedia を使って
-                    // マイクの許可を明示的に要求し、許可ダイアログを強制的に表示させる。
+                    // マイクの許可を明示的に要求
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     stream.getTracks().forEach(track => track.stop()); // ストリームはすぐに停止
 
@@ -337,13 +327,11 @@
                     micButton.classList.add('bg-primary-blue');
                     micIcon.style.stroke = 'white';
                     statusText.textContent = '❌ マイクの利用が拒否されました。ブラウザの設定を確認してください。'; 
-                    // warningTextはHTMLで静的に設定されているので変更しない
                 }
             };
             
             // 録音開始時のイベント 
             recognition.onstart = () => {
-                // UIはstartRecordingで更新済みだが、念のため状態を保証
                 isRecording = true;
             };
 
@@ -382,13 +370,12 @@
             // 録音終了時のイベント 
             recognition.onend = () => {
                 isRecording = false;
-                // UIはonendでリセット
+                // UIをリセット
                 micButton.classList.remove('bg-danger-red', 'recording-pulse');
                 micButton.classList.add('bg-primary-blue');
                 micIcon.style.stroke = 'white';
                 micInstruction.textContent = 'Tap and speak!'; 
                 
-                // 認識結果が空の場合、認識失敗として扱う
                 if (resultText.textContent === "" || resultText.textContent === "---") {
                     statusText.textContent = '聞こえませんでした。もう一度話してみよう！'; 
                     scoreArea.classList.add('hidden');
