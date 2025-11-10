@@ -126,6 +126,7 @@
 
     <script>
         // 環境がAPIキーを自動挿入するためのフックとして、空のキーを定義します。
+        // NOTE: この環境では、apiKeyが空の場合、fetchが自動的に認証を処理すると期待されます。
         const apiKey = ""; 
         const modelName = "gemini-2.5-flash-preview-09-2025";
         
@@ -191,9 +192,8 @@
             const systemPrompt = "You are a friendly and encouraging English teacher for elementary school students. Your task is to evaluate a single English sentence provided by the student. Provide a score from 1 to 100 based on correctness, clarity, and fluency. The scoring should be generous and focused on positive reinforcement. You must also provide the best Japanese translation of the spoken sentence, suitable for a child. Always return the response in the specified JSON format.";
             const userQuery = `Please score, give feedback, and provide a Japanese translation for the following English sentence spoken by a child: "${userTranscript}"`;
             
-            // 重要な修正: APIキーの自動挿入を有効にするため、?key=${apiKey} を含める
-            // 環境がこのパターンで認証トークンを挿入することを期待します。
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            // 重要な修正: APIキーをURLから削除し、ヘッダーベースの認証に期待する
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
@@ -209,9 +209,18 @@
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
+                    // 環境が自動で認証ヘッダーを付与することを期待し、
+                    // Content-Typeヘッダーのみを設定する
                     const response = await fetch(apiUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            // 実行環境が認証トークンを提供する場合のヘッダー名として、
+                            // 'X-API-Key' や 'Authorization' を想定するが、ここでは自動付与に依存する。
+                            // 強制的に認証ヘッダーを試すために、もし __initial_auth_token があれば使う（通常はGemini APIではないが、念のため）
+                            // const authHeader = typeof __initial_auth_token !== 'undefined' ? `Bearer ${__initial_auth_token}` : null;
+                            // if (authHeader) headers['Authorization'] = authHeader;
+                        },
                         body: JSON.stringify(payload)
                     });
 
@@ -220,7 +229,7 @@
                         const errorBody = await response.text();
                         // 403エラーが発生した場合、ログに詳細を含める
                         console.error(`Attempt ${attempt + 1} received a bad response status: ${response.status}. Full error body:`, errorBody.substring(0, 500) + '...');
-                        throw new Error(`HTTP error! status: ${response.status} (${response.statusText}). Error details: ${errorBody.substring(0, 80)}...`);
+                        throw new Error(`HTTP error! status: ${response.status} (${response.statusText}). Response body: ${errorBody.substring(0, 80)}...`);
                     }
 
                     const result = await response.json();
@@ -365,7 +374,7 @@
                     
                     // エラーメッセージにAPI関連のヒントを追加
                     retranslationText.textContent = 'AIによる採点処理中にエラーが発生しました。'; 
-                    feedbackText.textContent = `サーバー応答またはJSON解析エラーです。コンソールを確認し、もう一度お試しください。 (Error: ${e.message.split('\n')[0]})`;
+                    feedbackText.textContent = `サーバー応答またはJSON解析エラーです。コンソールを確認してください。 (Error: ${e.message.split('\n')[0]})`;
                     statusText.textContent = '❌ 採点中に重大なエラーが発生しました。'; 
                 }
             };
