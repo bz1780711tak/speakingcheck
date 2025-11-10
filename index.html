@@ -191,7 +191,8 @@
             const systemPrompt = "You are a friendly and encouraging English teacher for elementary school students. Your task is to evaluate a single English sentence provided by the student. Provide a score from 1 to 100 based on correctness, clarity, and fluency. The scoring should be generous and focused on positive reinforcement. You must also provide the best Japanese translation of the spoken sentence, suitable for a child. Always return the response in the specified JSON format.";
             const userQuery = `Please score, give feedback, and provide a Japanese translation for the following English sentence spoken by a child: "${userTranscript}"`;
             
-            // 修正済み: APIキーの自動挿入を有効にするため、?key=${apiKey} を含める
+            // 重要な修正: APIキーの自動挿入を有効にするため、?key=${apiKey} を含める
+            // 環境がこのパターンで認証トークンを挿入することを期待します。
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
             const payload = {
@@ -217,8 +218,9 @@
                     if (!response.ok) {
                         // HTTPエラーの場合、ステータスコードを含めてエラーを投げる
                         const errorBody = await response.text();
-                        // 403エラーが続く場合、認証の問題（キーがない）ことを示唆します。
-                        throw new Error(`HTTP error! status: ${response.status} (${response.statusText}). Response body: ${errorBody.substring(0, 100)}...`);
+                        // 403エラーが発生した場合、ログに詳細を含める
+                        console.error(`Attempt ${attempt + 1} received a bad response status: ${response.status}. Full error body:`, errorBody.substring(0, 500) + '...');
+                        throw new Error(`HTTP error! status: ${response.status} (${response.statusText}). Error details: ${errorBody.substring(0, 80)}...`);
                     }
 
                     const result = await response.json();
@@ -226,7 +228,8 @@
                     
                     if (!jsonText) {
                         // JSONテキストが空の場合、完全な結果をログに含める
-                        throw new Error("Received empty JSON response from API. Full result logged in console.");
+                        console.error("Received unexpected or empty API response structure. Full result:", result);
+                        throw new Error("API response was missing expected JSON content.");
                     }
 
                     const parsedJson = JSON.parse(jsonText);
@@ -234,7 +237,6 @@
 
                 } catch (error) {
                     lastError = error;
-                    console.error(`Attempt ${attempt + 1} failed. Error: ${error.message}`);
                     // Exponential backoff
                     if (attempt < maxRetries - 1) {
                         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
@@ -363,7 +365,7 @@
                     
                     // エラーメッセージにAPI関連のヒントを追加
                     retranslationText.textContent = 'AIによる採点処理中にエラーが発生しました。'; 
-                    feedbackText.textContent = `サーバー応答またはJSON解析エラーです。コンソールを確認し、もう一度お試しください。 (Server/JSON error: ${e.message.split('\n')[0]})`;
+                    feedbackText.textContent = `サーバー応答またはJSON解析エラーです。コンソールを確認し、もう一度お試しください。 (Error: ${e.message.split('\n')[0]})`;
                     statusText.textContent = '❌ 採点中に重大なエラーが発生しました。'; 
                 }
             };
