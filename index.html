@@ -55,7 +55,7 @@
     <!-- メインコンテナ -->
     <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 md:p-10 border-4 border-primary-blue">
         
-        <!-- タイトル -->
+        <!-- タイトルをSpeaking Checkに変更 -->
         <h1 class="text-3xl md:text-4xl font-bold text-center text-primary-blue mb-6">
             <span role="img" aria-label="speech icon">🗣️</span>
             Speaking Check
@@ -69,11 +69,15 @@
         </div>
 
         <!-- 認識されたテキスト表示エリア -->
+        <!-- 境界線をシンプルに -->
         <div class="bg-white border-2 border-gray-300 p-4 rounded-xl shadow-inner min-h-[100px] mb-8">
             <h2 class="text-xl font-bold text-gray-700 mb-2">What You Said（あなたが言ったこと）：</h2>
             <p id="result-text" class="text-2xl text-gray-800 font-extrabold break-words">---</p>
         </div>
         
+        <!-- 例文表示エリア (新しく追加) -->
+        <!-- 例文検索機能は前回の作業で削除されたため、ここでは含めません -->
+
         <!-- マイクボタンコンテナ -->
         <div class="flex flex-col items-center justify-center">
             <button id="microphone-button" class="microphone-btn 
@@ -95,8 +99,10 @@
             <p id="mic-instruction" class="mt-4 text-gray-600 font-medium">Tap and speak!</p>
         </div>
         
+        <!-- 警告ボックスは削除されました -->
+
     </div>
-    
+
     <script>
         // DOM要素の取得
         const statusText = document.getElementById('status-text');
@@ -178,16 +184,41 @@
                 let transcript = event.results[0][0].transcript;
                 
                 // 認識結果の整形
-                // 文頭を大文字にする
+                
+                // 1. 文頭を大文字にする
                 if (transcript.length > 0) {
                     transcript = transcript.charAt(0).toUpperCase() + transcript.slice(1);
                 }
                 
-                // 文末に句点がない場合、ピリオドを追加
-                if (!/[.!?]$/.test(transcript.trim())) {
-                    transcript = transcript.trim() + '.';
+                // 2. 疑問文かどうかを推定し、文末の句読点を調整
+                // 疑問詞 (Who, What, Where, When, Why, How) または助動詞 (Do, Did, Does, Are, Is, Can, Could, Will, Would, Shall, Should, Have, Has, May, Might, Must) で始まるかを簡易的にチェック
+                const trimmedTranscript = transcript.trim();
+                const firstWord = trimmedTranscript.split(' ')[0].toLowerCase();
+                
+                const questionWords = ['who', 'what', 'where', 'when', 'why', 'how', 
+                                       'do', 'did', 'does', 'are', 'is', 'can', 'could', 
+                                       'will', 'would', 'shall', 'should', 'have', 'has', 
+                                       'may', 'might', 'must'];
+
+                const isQuestion = questionWords.includes(firstWord);
+                
+                // 3. 句読点の追加/置換
+                const hasPunctuation = /[.!?]$/.test(trimmedTranscript);
+                
+                if (isQuestion) {
+                    // 疑問文と推定される場合、既存の句読点を削除してから疑問符を追加
+                    if (hasPunctuation) {
+                        transcript = trimmedTranscript.replace(/[.!?]$/, '');
+                    } else {
+                        transcript = trimmedTranscript;
+                    }
+                    transcript = transcript.trim() + '?';
+                } else if (!hasPunctuation) {
+                    // 平叙文と推定され、句読点がない場合、ピリオドを追加
+                    transcript = trimmedTranscript.trim() + '.';
                 } else {
-                    transcript = transcript.trim();
+                    // 既に句読点がある場合 (例: 認識が "Wow!" で終わった場合) はそのまま
+                    transcript = trimmedTranscript;
                 }
 
                 resultText.textContent = transcript;
